@@ -142,4 +142,31 @@ typedef vector<int> Path;
 typedef TNEANet::TEdgeI EdgeI;
 typedef TNEANet::TNodeI NodeI;
 
+void forInput(function<void(const string&)> fn) {
+	clock_t begin = clock();
+
+	std::ifstream filelist("input_list.txt");
+	string path;
+	while (filelist >> path) {
+		if (path[0] == '#') {
+			continue;
+		}
+		clock_t t = clock();
+
+		fn(path);
+
+		clock_t now = clock();
+		clock_t elapsed_secs = double(now - t) / CLOCKS_PER_SEC;
+		if (elapsed_secs < 60) {
+			PRINTF("elapsed time=%d sec\n", elapsed_secs);
+		} else {
+			PRINTF("elapsed time=%d min\n", elapsed_secs / 60);
+		}
+	}
+
+	clock_t end = clock();
+	clock_t elapsed_secs = double(end - begin) / CLOCKS_PER_SEC;
+	PRINTF("total time=%.1f min\n", (float) elapsed_secs / 60);
+}
+
 #endif /* UTILS_H_ */

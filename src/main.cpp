@@ -17,33 +17,6 @@ using namespace TSnap;
 #define INF numeric_limits<int>::max()
 #define WEIGHTATTR "weight"
 
-void forInput(function<void(const string&)> fn) {
-	clock_t begin = clock();
-
-	std::ifstream filelist("input_list.txt");
-	string path;
-	while (filelist >> path) {
-		if (path[0] == '#') {
-			continue;
-		}
-		clock_t t = clock();
-
-		fn(path);
-
-		clock_t now = clock();
-		clock_t elapsed_secs = double(now - t) / CLOCKS_PER_SEC;
-		if (elapsed_secs < 60) {
-			PRINTF("elapsed time=%d sec\n", elapsed_secs);
-		} else {
-			PRINTF("elapsed time=%d min\n", elapsed_secs / 60);
-		}
-	}
-
-	clock_t end = clock();
-	clock_t elapsed_secs = double(end - begin) / CLOCKS_PER_SEC;
-	PRINTF("total time=%d min\n", elapsed_secs / 60);
-}
-
 class ICModel {
 	const MyGraph& G;
 	const int R;
@@ -75,6 +48,7 @@ class ICModel {
 
 		int frame = 0;
 		if (draw) {
+			updateTitle();
 			draw_graph(frame++);
 		}
 		while (!q.empty()) {
@@ -101,16 +75,17 @@ class ICModel {
 //				PRINTF("out neighbor %d has in degree=%d, spread=%d\n",
 //						out_neighbor.GetId(), in_degree, spread);
 				if (deterministic || rand() % in_degree == 0) { // true with probability 1/in_degree
+					++spread;
 					q.push_front(out_neighbor);
 					active[out_neighbor.GetId()] = true;
 					if (draw) {
 						NIdColorH.AddDat(NI.GetOutNId(out_degree), "blue");
 						EIdColorH.AddDat(NI.GetOutEId(out_degree), "blue");
+						updateTitle(spread);
 						draw_graph(frame++);
 						NIdColorH.AddDat(out_neighbor.GetId(), "black");
 						EIdColorH.AddDat(NI.GetOutEId(out_degree), "black");
 					}
-					++spread;
 					assert(spread <= G->GetNodes());
 				}
 			}
@@ -143,15 +118,17 @@ public:
 	const char* title_template =
 			"spread ratio=%d%%, %d nodes, %d edges\n Yellow: seed, Black: activated, Blue: activating\n";
 	char title[200];
+	size_t spreadLimit = 0;
 
-	void setTitle(const int ratio = 0) {
+	void updateTitle(const size_t spread = 0) {
+		int ratio = 100 * (float) spread / spreadLimit;
 		sprintf(title, title_template, ratio, G->GetNodes(), G->GetEdges());
 	}
 
 	ICModel(const MyGraph& G, const int R, const TStr& pathobj) :
 			G(G), R(R), dataPath(pathobj) {
 		assert(R > 0);
-		setTitle();
+		updateTitle();
 	}
 
 	void draw_graph(const int frameNo) {
@@ -186,10 +163,10 @@ public:
 	}
 	// the maximum possible spread using the seedSet
 	size_t deterministic_spread(const vector<NodeI>& seedSet) {
-		return diffusion_spread(seedSet, true);
+		return spreadLimit = diffusion_spread(seedSet, true);
 	}
-	size_t simulate(const vector<NodeI>& seedSet) {
-		return diffusion_spread(seedSet, false, true);
+	size_t simulate(const vector<NodeI>& seedSet, const bool nodraw = false) {
+		return diffusion_spread(seedSet, false, !nodraw);
 	}
 };
 
@@ -199,9 +176,10 @@ void advance(EdgeI& EI, int n) {
 	}
 }
 
-// scale down the edge set
-void sparsify(MyGraph& G, const int percent) {
-	int b = G->GetEdges() - ((float) percent / 100) * G->GetEdges();
+// scale down the edge set by scale<=1
+void sparsify(MyGraph& G, const float scale) {
+	assert(scale <= 1);
+	int b = G->GetEdges() - scale * G->GetEdges();
 	// sparsify by deleting edges randomly
 	//TRnd(time(NULL)).Randomize(); // this doesn't work!
 	while (b-- > 0) {
@@ -215,7 +193,7 @@ int main() {
 	init();
 //	ofstream resultFile(Reporter::resultDir() + "overall.txt");
 
-	const int R = 100; // Monte Carlo iterations
+	const int R = 1000; // Monte Carlo iterations
 	const int SEEDS = 3;
 
 	forInput(
@@ -224,7 +202,18 @@ int main() {
 				const TStr pathobj(path.c_str());
 
 				MyGraph G = LoadEdgeList<MyGraph>(pathobj, 0, 1);
-				sparsify(G,20);
+				if(G->GetEdges() > 200) {
+					sparsify(G, 200.0 / G->GetEdges());
+				}
+				if(G->GetEdges() > 4*G->GetNodes()) {
+					sparsify(G, ((float)4*G->GetNodes()) / G->GetEdges());
+				}
+
+				for (NodeI NI = G->BegNI(); NI != G->EndNI(); NI++) {
+					if(NI.GetOutDeg()==0 && NI.GetInDeg()==0) {
+						G->DelNode(NI.GetId());
+					}
+				}
 
 				char title[20];
 				sprintf(title,"%d nodes, %d edges\n",G->GetNodes(),G->GetEdges());
@@ -233,17 +222,15 @@ int main() {
 				ICModel model(G, R, pathobj);
 				auto [seeds, spread] = model.seed_selection(SEEDS);
 
-				const size_t maxSpread = model.deterministic_spread(seeds);
-				int ratio =100*spread/maxSpread;
-				PRINTF("spread=%f/%d, ratio=%d%%, seeds=%d\n", spread, maxSpread, ratio,seeds.size() );
-				model.setTitle(ratio);
+				model.deterministic_spread(seeds);
+				int ratio =100*spread/model.spreadLimit;
+				PRINTF("spread=%f/%d, ratio=%d%%, seeds=%d\n", spread, model.spreadLimit, ratio,seeds.size() );
 
 				PRINTF("drawing and simulation...\n");
-//			model.draw_graph(0);
 
 				spread = model.simulate(seeds);
-				ratio =100*spread/maxSpread;
-				PRINTF("spread1=%f, ratio1=%d%%\n", spread, ratio);
+				model.updateTitle(spread);
+				PRINTF("title= %s\n", model.title);
 			});
 	return 0;
 }
