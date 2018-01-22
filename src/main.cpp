@@ -14,8 +14,8 @@
 using namespace std;
 using namespace TSnap;
 
-#define INF numeric_limits<int>::max()
-#define WEIGHTATTR "weight"
+const int SEEDS = 1;
+const int R = 500 / SEEDS; // Monte Carlo iterations
 
 class ICModel {
 	const MyGraph& G;
@@ -116,13 +116,13 @@ class ICModel {
 
 public:
 	const char* title_template =
-			"spread ratio=%d%%, %d nodes, %d edges\n Yellow: seed, Black: activated, Blue: activating\n";
+			"spread ratio=%d%%, nodes:%d, edges:%d, R=%d; Yellow: seed, Black: activated, Blue: activating\n";
 	char title[200];
 	size_t spreadLimit = 0;
 
 	void updateTitle(const size_t spread = 0) {
 		int ratio = 100 * (float) spread / spreadLimit;
-		sprintf(title, title_template, ratio, G->GetNodes(), G->GetEdges());
+		sprintf(title, title_template, ratio, G->GetNodes(), G->GetEdges(), R);
 	}
 
 	ICModel(const MyGraph& G, const int R, const TStr& pathobj) :
@@ -132,13 +132,16 @@ public:
 	}
 
 	void draw_graph(const int frameNo) {
-		TStr imagePath = dataPath + "_/" + "image.png";
-		DrawGViz(G, TGVizLayout::gvlDot,
-				imagePath.GetNumFNm(imagePath, frameNo), title, false,
-				NIdColorH, EIdColorH);
+		TStr imagePath = dataPath + "_/seeds" + to_string(SEEDS).c_str() + "/"
+				+ "image.png";
+		imagePath = imagePath.GetNumFNm(imagePath, frameNo);
+
+		DrawGViz(G, TGVizLayout::gvlDot, imagePath, title, false, NIdColorH,
+				EIdColorH);
 	}
 
 	tuple<vector<NodeI>, float> seed_selection(int k) {
+		srand(time(NULL));
 		vector<NodeI> chosen;
 		float spread;
 		while (k-- > 0) {
@@ -166,6 +169,7 @@ public:
 		return spreadLimit = diffusion_spread(seedSet, true);
 	}
 	size_t simulate(const vector<NodeI>& seedSet, const bool nodraw = false) {
+		srand(time(NULL));
 		return diffusion_spread(seedSet, false, !nodraw);
 	}
 };
@@ -177,8 +181,10 @@ void advance(EdgeI& EI, int n) {
 }
 
 // scale down the edge set by scale<=1
+// always produces same output for an input graph
 void sparsify(MyGraph& G, const float scale) {
 	assert(scale <= 1);
+	srand(1); // deterministic
 	int b = G->GetEdges() - scale * G->GetEdges();
 	// sparsify by deleting edges randomly
 	//TRnd(time(NULL)).Randomize(); // this doesn't work!
@@ -187,18 +193,17 @@ void sparsify(MyGraph& G, const float scale) {
 		advance(rndEI, rand() % G->GetEdges());
 		G->DelEdge(rndEI.GetId());
 	}
+	srand(time(NULL));
 }
 
 int main() {
 	init();
 //	ofstream resultFile(Reporter::resultDir() + "overall.txt");
 
-	const int R = 1000; // Monte Carlo iterations
-	const int SEEDS = 3;
-
 	forInput(
 			[](const string& path) {
-				printf("\nLoading %s\n", path.c_str());
+				printf(BLUE("\nLoading "));
+				printf("%s\n", path.c_str());
 				const TStr pathobj(path.c_str());
 
 				MyGraph G = LoadEdgeList<MyGraph>(pathobj, 0, 1);

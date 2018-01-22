@@ -21,6 +21,12 @@
 
 #define RESULT_DIR string("results")
 
+#define ANSI_COLOR_RESET "\033[0m"
+#define RED(TXT)     "\033[1;31m" TXT ANSI_COLOR_RESET
+#define GREEN(TXT)   "\033[1;32m" TXT ANSI_COLOR_RESET
+#define YELLOW(TXT)  "\033[1;33m" TXT ANSI_COLOR_RESET
+#define BLUE(TXT)    "\033[1;34m" TXT ANSI_COLOR_RESET
+
 #include <execinfo.h>
 #include <signal.h>
 #include <assert.h>
