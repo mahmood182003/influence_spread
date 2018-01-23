@@ -1,7 +1,7 @@
 clear
 reset
 
-set title "Simulation Spread Chart".ARG2
+set title "Spread Simulation Chart".ARG2
 set key left Left
 set offset -0.5
 
