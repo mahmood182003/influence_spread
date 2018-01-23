@@ -123,15 +123,15 @@ class ICModel {
 public:
 #ifdef PAGERANK
 	const char* title_template =
-			"spread=%d, ratio=%d%%, nodes:%d, edges:%d, Seed selection: Page-Rank (Berkhin's); Yellow: seed, Black: activated, Blue: activating\n";
-	#else
+	"spread=%d, ratio=%d%%, nodes:%d, edges:%d, Seed selection: Page-Rank (Berkhin's); Yellow: seed, Black: activated, Blue: activating\n";
+#else
 #ifdef HIGHDEGREE
 	const char* title_template =
 	"spread=%d, ratio=%d%%, nodes:%d, edges:%d, Seed selection: High-Degree; Yellow: seed, Black: activated, Blue: activating\n";
 #else
 	const char* title_template =
-	"spread=%d, ratio=%d%%, nodes:%d, edges:%d, Seed selection: Greedy (R=%d); Yellow: seed, Black: activated, Blue: activating\n";
-#endif
+			"spread=%d, ratio=%d%%, nodes:%d, edges:%d, Seed selection: Greedy (R=%d); Yellow: seed, Black: activated, Blue: activating\n";
+	#endif
 #endif
 	char title[200];
 	size_t spreadLimit = 0;
@@ -298,19 +298,20 @@ int main(int argc, char* argv[]) {
 			vector<NodeI> seeds;
 			model.seedSelect_pageRank(SEEDS, seeds);
 			int spread1 = -1, ratio1 = 0;
+			model.deterministic_spread(seeds);
 #else
 #ifdef HIGHDEGREE
 			vector<NodeI> seeds;
 			model.seedSelect_highDegree(SEEDS, seeds);
 			int spread1 = -1, ratio1 = 0;
+			model.deterministic_spread(seeds);
 #else
 			auto [seeds, spread1] = model.seedSelect_greedy(SEEDS);
-
+			model.deterministic_spread(seeds);
 			int ratio1 =100*spread1/model.spreadLimit;
 			PRINTF("spread=%f/%d, ratio=%d%%, seeds=%d\n", spread1, model.spreadLimit, ratio1, seeds.size() );
 #endif
 #endif
-			model.deterministic_spread(seeds);
 
 			PRINTF("drawing and simulation...\n");
 
