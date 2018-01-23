@@ -54,7 +54,6 @@ void handler(int sig) {
 FILE *f;
 void init() {
 	signal(SIGSEGV, handler); // install our handler
-//	signal(SIGABRT, handler);
 
 	/* initialize random seed: */
 	srand(time(NULL));
@@ -148,6 +147,7 @@ typedef vector<int> Path;
 typedef TNEANet::TEdgeI EdgeI;
 typedef TNEANet::TNodeI NodeI;
 
+// iterate over all input files
 void forInput(function<void(const string&)> fn) {
 	clock_t begin = clock();
 

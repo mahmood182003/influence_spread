@@ -1,5 +1,5 @@
 #!/bin/bash
-find twitter -type f -name "*.edges" | while read file;
+find data/twitter -type f -name "*.edges" | while read file;
 do
     f=$(basename "$file")
     f1=${f%.*}
