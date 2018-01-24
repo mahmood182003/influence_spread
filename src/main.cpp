@@ -17,7 +17,7 @@ using namespace TSnap;
 int SEEDS = 0;
 int R;
 
-#define BASE_R 2000
+#define BASE_R 1000
 
 // uncomment at most one, default is GREEDY
 //#define PAGERANK 1
@@ -315,7 +315,7 @@ int main(int argc, char* argv[]) {
 
 			PRINTF("drawing and simulation...\n");
 
-			size_t spread2 = model.simulate(seeds);
+			size_t spread2 = model.simulate(seeds,true);
 			int ratio2 = model.updateTitle(spread2);
 			PRINTF("%s\n", model.title);
 
